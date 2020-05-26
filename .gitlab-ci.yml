@@ -6,6 +6,8 @@ stages:
 build:
   stage: build
   tags: ["runner:docker", "size:large"]
+  variables:
+    TESTCONTAINERS_RYUK_DISABLED: "true"
   script:
     - apt-get update || echo debian jessie is old
     - apt-get install -y --no-install-recommends awscli
