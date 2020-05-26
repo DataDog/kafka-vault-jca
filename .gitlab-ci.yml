@@ -1,0 +1,16 @@
+image: maven:3.3-jdk-8
+
+stages:
+  - build
+
+build:
+  stage: build
+  tags: ["runner:docker", "size:large"]
+  variables:
+    TESTCONTAINERS_RYUK_DISABLED: "true"
+  script:
+    - apt-get update || echo debian jessie is old
+    - apt-get install -y --no-install-recommends awscli
+    - mvn install
+    - aws s3 cp --region us-east-1 --sse AES256 --acl bucket-owner-full-control target/kafka-vault-jca-1.0-SNAPSHOT.jar s3://dd-ci-artefacts-build-stable/$CI_PROJECT_NAME/$CI_COMMIT_REF_SLUG/
+    - aws s3 cp --region us-east-1 --sse AES256 --acl bucket-owner-full-control target/kafka-vault-jca-1.0-SNAPSHOT.jar s3://dd-ci-persistent-artefacts-build-stable/$CI_PROJECT_NAME/
