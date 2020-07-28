@@ -22,7 +22,9 @@ import org.mockito.ArgumentMatchers;
 public class VaultLoginModuleTest {
 
   protected static final String VAULT_KAFKA_ADMIN_PATH = "secrets/kafka/admin";
+  protected static final String VAULT_KAFKA_TEMPLATED_ADMIN_PATH = "kafka/{username}/secret}";
   protected static final String VAULT_KAFKA_USERS_PATH = "secrets/kafka/users";
+  protected static final String VAULT_KAFKA_TEMPLATED_USERS_PATH = "kafka/{username}/secret}";
   private static final String ADMIN = "admin";
   private static final String ADMINPWD = "adminpwd";
   private VaultService vaultService = mock(VaultService.class);

@@ -86,6 +86,26 @@ public class VaultAuthenticationLoginCallbackHandlerTest {
   }
 
   @Test
+  public void shouldHandleTemplatedAdminLogin() throws Exception {
+    callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
+
+    Callback[] callbacks = new Callback[2];
+    callbacks[0] = new NameCallback("username", "admin");
+    callbacks[1] = new PlainAuthenticateCallback("adminpwd".toCharArray());
+
+    Map<String, String> adminCreds = new HashMap<>();
+    adminCreds.put("username", "admin");
+    adminCreds.put(VaultAuthenticationLoginCallbackHandler.PASSWORD_MAP_ENTRY_KEY, "adminpwd");
+
+    // when(vaultService.getSecret(ArgumentMatchers.eq(VAULT_KAFKA_TEMPLATED_ADMIN_PATH))).thenReturn(adminCreds);
+
+    callbackHandler.handle(callbacks);
+    assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
+    verify(vaultService).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH));
+    verify(vaultService, never()).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_USERS_PATH));
+  }
+
+  @Test
   public void shouldHandleClientLogin() throws Exception {
     callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
 

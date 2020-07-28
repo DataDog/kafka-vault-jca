@@ -55,6 +55,7 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
   static final String USERS_PATH = "users_path";
   static final String ADMIN_PATH = "admin_path";
   static final String PASSWORD_MAP_ENTRY_KEY = "password";
+
   private final VaultService vaultService;
   private String usersPathVault;
   private String adminPathVault;
@@ -79,6 +80,7 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
     // Loading vault path from jaas config
     adminPathVault = JaasContext.configEntryOption(jaasConfigEntries, ADMIN_PATH, VaultLoginModule.class.getName());
     usersPathVault = JaasContext.configEntryOption(jaasConfigEntries, USERS_PATH, VaultLoginModule.class.getName());
+
     log.info("usersPathVault = {}", usersPathVault);
     if (usersPathVault == null || usersPathVault.isEmpty()) {
       throw new RuntimeException(String.format("Jaas file needs an entry %s to the path in vault where the users reside", USERS_PATH));
@@ -120,12 +122,22 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
     }
   }
 
+  private boolean isTemplatedPath(String path) {
+    return path.contains("{username}");
+  }
+
   private boolean authenticateWithVault(String username, char[] password) {
     if (username == null) {
       return false;
     }
 
-    String pathVault = username.equals("admin") ? adminPathVault : String.format("%s/%s", usersPathVault, username);
+
+    String userRenderedPath = isTemplatedPath(usersPathVault) ?  usersPathVault.replace("{username}", username)
+                                                              : String.format("%s/%s", usersPathVault, username);
+    String adminRenderedPath = isTemplatedPath(adminPathVault) ? adminPathVault.replace("{username}", username)
+                                                              : adminPathVault;
+
+    String pathVault = username.equals("admin") ? adminRenderedPath : userRenderedPath;
     log.info("Trying authentication for {} in path {}", username, pathVault);
     Map<String, String> usersMap = vaultService.getSecret(pathVault);
     if (usersMap.size() == 0) {
