@@ -2,6 +2,9 @@ package com.ultimatesoftware.dataplatform.vaultjca;
 
 import static com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModuleTest.VAULT_KAFKA_ADMIN_PATH;
 import static com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModuleTest.VAULT_KAFKA_USERS_PATH;
+import static com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModuleTest.VAULT_KAFKA_TEMPLATED_USERS_PATH;
+import static com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModuleTest.VAULT_KAFKA_TEMPLATED_ADMIN_PATH;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -51,6 +54,17 @@ public class VaultAuthenticationLoginCallbackHandlerTest {
     jaasConfigEntries.add(entry);
   }
 
+  private void initForTemplated() {
+    options.put(VaultAuthenticationLoginCallbackHandler.ADMIN_PATH, VAULT_KAFKA_TEMPLATED_ADMIN_PATH);
+    options.put(VaultAuthenticationLoginCallbackHandler.USERS_PATH, VAULT_KAFKA_TEMPLATED_USERS_PATH);
+
+    jaasConfigEntries = new ArrayList<>();
+    AppConfigurationEntry entry =
+            new AppConfigurationEntry("com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModule",
+                    AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options);
+    jaasConfigEntries.add(entry);
+  }
+
   @Test
   public void shouldConfigureCallback() {
     callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
@@ -87,6 +101,7 @@ public class VaultAuthenticationLoginCallbackHandlerTest {
 
   @Test
   public void shouldHandleTemplatedAdminLogin() throws Exception {
+    initForTemplated();
     callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
 
     Callback[] callbacks = new Callback[2];
@@ -97,11 +112,12 @@ public class VaultAuthenticationLoginCallbackHandlerTest {
     adminCreds.put("username", "admin");
     adminCreds.put(VaultAuthenticationLoginCallbackHandler.PASSWORD_MAP_ENTRY_KEY, "adminpwd");
 
-    // when(vaultService.getSecret(ArgumentMatchers.eq(VAULT_KAFKA_TEMPLATED_ADMIN_PATH))).thenReturn(adminCreds);
+    String renderedAdminPath = VAULT_KAFKA_TEMPLATED_ADMIN_PATH.replace("{username}", "admin");
+    when(vaultService.getSecret(ArgumentMatchers.eq(renderedAdminPath))).thenReturn(adminCreds);
 
     callbackHandler.handle(callbacks);
     assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
-    verify(vaultService).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH));
+    verify(vaultService).getSecret(ArgumentMatchers.eq(renderedAdminPath));
     verify(vaultService, never()).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_USERS_PATH));
   }
 

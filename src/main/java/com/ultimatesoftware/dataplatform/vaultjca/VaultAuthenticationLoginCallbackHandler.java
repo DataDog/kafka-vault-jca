@@ -112,7 +112,6 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
       }
 
       if (callback instanceof PlainAuthenticateCallback) {
-        log.info("Handling callback for PlainAuth {}", ((PlainAuthenticateCallback) callback).password());
         PlainAuthenticateCallback plainCallback = (PlainAuthenticateCallback) callback;
         plainCallback.authenticated(authenticateWithVault(username, plainCallback.password()));
         continue;
