@@ -43,7 +43,7 @@ public class VaultLoginModule implements LoginModule {
 
   public VaultLoginModule() {
     if (System.getenv(ENV_CACHE_VAULT) != null && System.getenv(ENV_CACHE_VAULT).equalsIgnoreCase("true")) {
-      log.debug("Cache vault enabled");
+      log.info("Cache vault enabled");
       vaultService = new CacheDecoratorVaultService(new DefaultVaultService());
     } else {
       vaultService = new DefaultVaultService();

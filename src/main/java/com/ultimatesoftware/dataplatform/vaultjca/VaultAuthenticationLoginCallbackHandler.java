@@ -1,6 +1,7 @@
 package com.ultimatesoftware.dataplatform.vaultjca;
 
 import static com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModule.ENV_CACHE_VAULT;
+import static com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModule.USERNAME_KEY;
 
 import com.ultimatesoftware.dataplatform.vaultjca.services.CacheDecoratorVaultService;
 import com.ultimatesoftware.dataplatform.vaultjca.services.DefaultVaultService;
@@ -51,102 +52,106 @@ import java.util.Map;
  */
 // https://strimzi.io/2018/11/16/using-vault-with-strimzi.html
 public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCallbackHandler {
-  private static final Logger log = LoggerFactory.getLogger(VaultAuthenticationLoginCallbackHandler.class);
-  static final String USERS_PATH = "users_path";
-  static final String ADMIN_PATH = "admin_path";
-  static final String PASSWORD_MAP_ENTRY_KEY = "password";
+    private static final Logger log = LoggerFactory.getLogger(VaultAuthenticationLoginCallbackHandler.class);
+    static final String USERS_PATH = "users_path";
+    static final String ADMIN_PATH = "admin_path";
+    static final String PASSWORD_MAP_ENTRY_KEY = "password";
+    static final String USER_MAP_ENTRY_KEY = "username";
 
-  private final VaultService vaultService;
-  private String usersPathVault;
-  private String adminPathVault;
+    public static final String USERNAME_TEMPLATE_FRAGMENT = "{username}";
 
-  public VaultAuthenticationLoginCallbackHandler() {
-    if (System.getenv(ENV_CACHE_VAULT) != null && System.getenv(ENV_CACHE_VAULT).equalsIgnoreCase("true")){
-      log.debug("Cache vault enabled");
-      vaultService = new CacheDecoratorVaultService(new DefaultVaultService());
-    }
-    else {
-      vaultService = new DefaultVaultService();
-    }
-  }
+    private final VaultService vaultService;
+    private String usersPathVault;
+    private String adminPathVault;
+    private String userMapEntryKey;
 
-  // for testing
-  protected VaultAuthenticationLoginCallbackHandler(VaultService vaultService) {
-    this.vaultService = vaultService;
-  }
-
-  @Override
-  public void configure(Map<String, ?> configs, String saslMechanism, List<AppConfigurationEntry> jaasConfigEntries) {
-    // Loading vault path from jaas config
-    adminPathVault = JaasContext.configEntryOption(jaasConfigEntries, ADMIN_PATH, VaultLoginModule.class.getName());
-    usersPathVault = JaasContext.configEntryOption(jaasConfigEntries, USERS_PATH, VaultLoginModule.class.getName());
-
-    log.info("usersPathVault = {}", usersPathVault);
-    if (usersPathVault == null || usersPathVault.isEmpty()) {
-      throw new RuntimeException(String.format("Jaas file needs an entry %s to the path in vault where the users reside", USERS_PATH));
-    }
-    if (adminPathVault == null || adminPathVault.isEmpty()) {
-      throw new RuntimeException(String.format("Jaas file needs an entry %s to the path in vault where the admin credentials reside", ADMIN_PATH));
-    }
-  }
-
-  @Override
-  public void close() {
-    log.debug("Close called");
-  }
-
-  /**
-   * Handles callback to Vault, expects a {@link NameCallback} with the username and a {@link PlainAuthenticateCallback} with the password.
-   * @param callbacks Callback array with NameCallback and PlainAuthenticateCallback
-   * @throws UnsupportedCallbackException thrown when callbacks are not of either type expected.
-   * @see CallbackHandler#handle(javax.security.auth.callback.Callback[])
-   */
-  @Override
-  public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
-    String username = null;
-    for (Callback callback : callbacks) {
-      if (callback instanceof NameCallback) {
-        username = ((NameCallback) callback).getDefaultName();
-        log.info("Handling callback for NameCallback {}", username);
-        continue;
-      }
-
-      if (callback instanceof PlainAuthenticateCallback) {
-        PlainAuthenticateCallback plainCallback = (PlainAuthenticateCallback) callback;
-        plainCallback.authenticated(authenticateWithVault(username, plainCallback.password()));
-        continue;
-      }
-
-      throw new UnsupportedCallbackException(callback);
-    }
-  }
-
-  private boolean isTemplatedPath(String path) {
-    return path.contains("{username}");
-  }
-
-  private boolean authenticateWithVault(String username, char[] password) {
-    if (username == null) {
-      return false;
+    public VaultAuthenticationLoginCallbackHandler() {
+        if (System.getenv(ENV_CACHE_VAULT) != null && System.getenv(ENV_CACHE_VAULT).equalsIgnoreCase("true")) {
+            log.debug("Cache vault enabled");
+            vaultService = new CacheDecoratorVaultService(new DefaultVaultService());
+        } else {
+            vaultService = new DefaultVaultService();
+        }
+        String fromEnv = System.getenv("KAFKA_VAULT_USER_ENTRY_KEY");
+        userMapEntryKey = fromEnv == null ? USER_MAP_ENTRY_KEY : fromEnv;
     }
 
-
-    String userRenderedPath = isTemplatedPath(usersPathVault) ?  usersPathVault.replace("{username}", username)
-                                                              : String.format("%s/%s", usersPathVault, username);
-    String adminRenderedPath = isTemplatedPath(adminPathVault) ? adminPathVault.replace("{username}", username)
-                                                              : adminPathVault;
-
-    String pathVault = username.equals("admin") ? adminRenderedPath : userRenderedPath;
-    log.info("Trying authentication for {} in path {}", username, pathVault);
-    Map<String, String> usersMap = vaultService.getSecret(pathVault);
-    if (usersMap.size() == 0) {
-      return false;
-    }
-    if (username.equals("admin")) {
-      return usersMap.get("username").equals(username) && Arrays.equals(usersMap.get(PASSWORD_MAP_ENTRY_KEY).toCharArray(), password);
+    // for testing
+    protected VaultAuthenticationLoginCallbackHandler(VaultService vaultService) {
+        this.vaultService = vaultService;
     }
 
-    log.info("Password match {}", Arrays.equals(usersMap.get(PASSWORD_MAP_ENTRY_KEY).toCharArray(), password));
-    return Arrays.equals(usersMap.get(PASSWORD_MAP_ENTRY_KEY).toCharArray(), password);
-  }
+    @Override
+    public void configure(Map<String, ?> configs, String saslMechanism, List<AppConfigurationEntry> jaasConfigEntries) {
+        // Loading vault path from jaas config
+        adminPathVault = JaasContext.configEntryOption(jaasConfigEntries, ADMIN_PATH, VaultLoginModule.class.getName());
+        usersPathVault = JaasContext.configEntryOption(jaasConfigEntries, USERS_PATH, VaultLoginModule.class.getName());
+
+        log.info("usersPathVault = {}", usersPathVault);
+        if (usersPathVault == null || usersPathVault.isEmpty()) {
+            throw new RuntimeException(String.format("Jaas file needs an entry %s to the path in vault where the users reside", USERS_PATH));
+        }
+        if (adminPathVault == null || adminPathVault.isEmpty()) {
+            throw new RuntimeException(String.format("Jaas file needs an entry %s to the path in vault where the admin credentials reside", ADMIN_PATH));
+        }
+    }
+
+    @Override
+    public void close() {
+        log.debug("Close called");
+    }
+
+    /**
+     * Handles callback to Vault, expects a {@link NameCallback} with the username and a {@link PlainAuthenticateCallback} with the password.
+     *
+     * @param callbacks Callback array with NameCallback and PlainAuthenticateCallback
+     * @throws UnsupportedCallbackException thrown when callbacks are not of either type expected.
+     * @see CallbackHandler#handle(javax.security.auth.callback.Callback[])
+     */
+    @Override
+    public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
+        String username = null;
+        for (Callback callback : callbacks) {
+            if (callback instanceof NameCallback) {
+                username = ((NameCallback) callback).getDefaultName();
+                log.debug("Handling callback for NameCallback {}", username);
+                continue;
+            }
+
+            if (callback instanceof PlainAuthenticateCallback) {
+                PlainAuthenticateCallback plainCallback = (PlainAuthenticateCallback) callback;
+                plainCallback.authenticated(authenticateWithVault(username, plainCallback.password()));
+                continue;
+            }
+
+            throw new UnsupportedCallbackException(callback);
+        }
+    }
+
+    private boolean isTemplatedPath(String path) {
+        return path.contains(USERNAME_TEMPLATE_FRAGMENT);
+    }
+
+    private boolean authenticateWithVault(String username, char[] password) {
+        if (username == null) {
+            return false;
+        }
+
+        String userRenderedPath = isTemplatedPath(usersPathVault) ? usersPathVault.replace(USERNAME_TEMPLATE_FRAGMENT, username)
+                : String.format("%s/%s", usersPathVault, username);
+        String adminRenderedPath = isTemplatedPath(adminPathVault) ? adminPathVault.replace(USERNAME_TEMPLATE_FRAGMENT, username)
+                : adminPathVault;
+
+        String pathVault = username.equals("admin") ? adminRenderedPath : userRenderedPath;
+        log.debug("Trying authentication for {} in path {}", username, pathVault);
+        Map<String, String> usersMap = vaultService.getSecret(pathVault);
+        if (usersMap.size() == 0) {
+            return false;
+        }
+        if (username.equals("admin")) {
+            return usersMap.get(userMapEntryKey).equals(username) && Arrays.equals(usersMap.get(PASSWORD_MAP_ENTRY_KEY).toCharArray(), password);
+        }
+
+        return Arrays.equals(usersMap.get(PASSWORD_MAP_ENTRY_KEY).toCharArray(), password);
+    }
 }

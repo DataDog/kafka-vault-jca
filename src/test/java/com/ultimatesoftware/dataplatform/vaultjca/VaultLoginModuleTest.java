@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.ultimatesoftware.dataplatform.vaultjca.services.VaultService;
+import static com.ultimatesoftware.dataplatform.vaultjca.VaultAuthenticationLoginCallbackHandler.USERNAME_TEMPLATE_FRAGMENT;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,12 +20,13 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentMatchers;
 
+
 public class VaultLoginModuleTest {
 
   protected static final String VAULT_KAFKA_ADMIN_PATH = "secrets/kafka/admin";
-  protected static final String VAULT_KAFKA_TEMPLATED_ADMIN_PATH = "kafka/{username}/secret}";
+  protected static final String VAULT_KAFKA_TEMPLATED_ADMIN_PATH = "kafka/" + USERNAME_TEMPLATE_FRAGMENT + "/secret";
   protected static final String VAULT_KAFKA_USERS_PATH = "secrets/kafka/users";
-  protected static final String VAULT_KAFKA_TEMPLATED_USERS_PATH = "kafka/{username}/secret}";
+  protected static final String VAULT_KAFKA_TEMPLATED_USERS_PATH = "kafka/" + USERNAME_TEMPLATE_FRAGMENT + "/secret";
   private static final String ADMIN = "admin";
   private static final String ADMINPWD = "adminpwd";
   private VaultService vaultService = mock(VaultService.class);

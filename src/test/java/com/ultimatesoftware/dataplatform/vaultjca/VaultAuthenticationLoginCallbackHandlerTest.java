@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ultimatesoftware.dataplatform.vaultjca.services.VaultService;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,6 +25,7 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.sasl.AuthorizeCallback;
+
 import org.apache.kafka.common.security.plain.PlainAuthenticateCallback;
 import org.junit.Before;
 import org.junit.Rule;
@@ -33,121 +35,124 @@ import org.mockito.ArgumentMatchers;
 
 public class VaultAuthenticationLoginCallbackHandlerTest {
 
-  public static final String SASL_MECHANISM = "PLAIN";
-  private VaultService vaultService = mock(VaultService.class);
-  private VaultAuthenticationLoginCallbackHandler callbackHandler = new VaultAuthenticationLoginCallbackHandler(vaultService);
-  private Map<String, String> options = new HashMap<>();
-  private List<AppConfigurationEntry> jaasConfigEntries;
+    public static final String SASL_MECHANISM = "PLAIN";
+    private VaultService vaultService = mock(VaultService.class);
+    private VaultAuthenticationLoginCallbackHandler callbackHandler;
+    private Map<String, String> options = new HashMap<>();
+    private List<AppConfigurationEntry> jaasConfigEntries;
 
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
-  @Before
-  public void init() {
-    options.put(VaultAuthenticationLoginCallbackHandler.ADMIN_PATH, VAULT_KAFKA_ADMIN_PATH);
-    options.put(VaultAuthenticationLoginCallbackHandler.USERS_PATH, VAULT_KAFKA_USERS_PATH);
+    @Before
+    public void init() {
+        callbackHandler = new VaultAuthenticationLoginCallbackHandler(vaultService);
+        options.put(VaultAuthenticationLoginCallbackHandler.ADMIN_PATH, VAULT_KAFKA_ADMIN_PATH);
+        options.put(VaultAuthenticationLoginCallbackHandler.USERS_PATH, VAULT_KAFKA_USERS_PATH);
 
-    jaasConfigEntries = new ArrayList<>();
-    AppConfigurationEntry entry =
-        new AppConfigurationEntry("com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModule",
-            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options);
-    jaasConfigEntries.add(entry);
-  }
+        jaasConfigEntries = new ArrayList<>();
+        AppConfigurationEntry entry =
+                new AppConfigurationEntry("com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModule",
+                        AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options);
+        jaasConfigEntries.add(entry);
+    }
 
-  private void initForTemplated() {
-    options.put(VaultAuthenticationLoginCallbackHandler.ADMIN_PATH, VAULT_KAFKA_TEMPLATED_ADMIN_PATH);
-    options.put(VaultAuthenticationLoginCallbackHandler.USERS_PATH, VAULT_KAFKA_TEMPLATED_USERS_PATH);
+    private void initForTemplated() {
+        options.put(VaultAuthenticationLoginCallbackHandler.ADMIN_PATH, VAULT_KAFKA_TEMPLATED_ADMIN_PATH);
+        options.put(VaultAuthenticationLoginCallbackHandler.USERS_PATH, VAULT_KAFKA_TEMPLATED_USERS_PATH);
 
-    jaasConfigEntries = new ArrayList<>();
-    AppConfigurationEntry entry =
-            new AppConfigurationEntry("com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModule",
-                    AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options);
-    jaasConfigEntries.add(entry);
-  }
+        jaasConfigEntries = new ArrayList<>();
+        AppConfigurationEntry entry =
+                new AppConfigurationEntry("com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModule",
+                        AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options);
+        jaasConfigEntries.add(entry);
+    }
 
-  @Test
-  public void shouldConfigureCallback() {
-    callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
+    @Test
+    public void shouldConfigureCallback() {
+        callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
 
-  }
+    }
 
-  @Test
-  public void shouldThrownExceptionWhenPathsAreNotPresent() {
-    options.remove(VaultAuthenticationLoginCallbackHandler.ADMIN_PATH);
-    thrown.expect(RuntimeException.class);
-    thrown.expectMessage(containsString("Jaas file needs an entry"));
-    callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
-  }
+    @Test
+    public void shouldThrownExceptionWhenPathsAreNotPresent() {
+        options.remove(VaultAuthenticationLoginCallbackHandler.ADMIN_PATH);
+        thrown.expect(RuntimeException.class);
+        thrown.expectMessage(containsString("Jaas file needs an entry"));
+        callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
+    }
 
-  @Test
-  public void shouldHandleAdminLogin() throws Exception {
-    callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
+    @Test
+    public void shouldHandleAdminLogin() throws Exception {
+        callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
 
-    Callback[] callbacks = new Callback[2];
-    callbacks[0] = new NameCallback("username", "admin");
-    callbacks[1] = new PlainAuthenticateCallback("adminpwd".toCharArray());
+        Callback[] callbacks = new Callback[2];
+        callbacks[0] = new NameCallback("username", "admin");
+        callbacks[1] = new PlainAuthenticateCallback("adminpwd".toCharArray());
 
-    Map<String, String> adminCreds = new HashMap<>();
-    adminCreds.put("username", "admin");
-    adminCreds.put(VaultAuthenticationLoginCallbackHandler.PASSWORD_MAP_ENTRY_KEY, "adminpwd");
+        Map<String, String> adminCreds = new HashMap<>();
+        adminCreds.put("username", "admin");
+        adminCreds.put(VaultAuthenticationLoginCallbackHandler.PASSWORD_MAP_ENTRY_KEY, "adminpwd");
 
-    when(vaultService.getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH))).thenReturn(adminCreds);
+        when(vaultService.getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH))).thenReturn(adminCreds);
 
-    callbackHandler.handle(callbacks);
-    assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
-    verify(vaultService).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH));
-    verify(vaultService, never()).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_USERS_PATH));
-  }
+        callbackHandler.handle(callbacks);
+        assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
+        verify(vaultService).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH));
+        verify(vaultService, never()).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_USERS_PATH));
+    }
 
-  @Test
-  public void shouldHandleTemplatedAdminLogin() throws Exception {
-    initForTemplated();
-    callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
+    @Test
+    public void shouldHandleTemplatedAdminLogin() throws Exception {
+        initForTemplated();
+        callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
 
-    Callback[] callbacks = new Callback[2];
-    callbacks[0] = new NameCallback("username", "admin");
-    callbacks[1] = new PlainAuthenticateCallback("adminpwd".toCharArray());
+        Callback[] callbacks = new Callback[2];
+        callbacks[0] = new NameCallback("username", "admin");
+        callbacks[1] = new PlainAuthenticateCallback("adminpwd".toCharArray());
 
-    Map<String, String> adminCreds = new HashMap<>();
-    adminCreds.put("username", "admin");
-    adminCreds.put(VaultAuthenticationLoginCallbackHandler.PASSWORD_MAP_ENTRY_KEY, "adminpwd");
+        Map<String, String> adminCreds = new HashMap<>();
+        adminCreds.put("username", "admin");
+        adminCreds.put(VaultAuthenticationLoginCallbackHandler.PASSWORD_MAP_ENTRY_KEY, "adminpwd");
 
-    String renderedAdminPath = VAULT_KAFKA_TEMPLATED_ADMIN_PATH.replace("{username}", "admin");
-    when(vaultService.getSecret(ArgumentMatchers.eq(renderedAdminPath))).thenReturn(adminCreds);
+        String renderedAdminPath = VAULT_KAFKA_TEMPLATED_ADMIN_PATH.replace("{username}", "admin");
+        when(vaultService.getSecret(ArgumentMatchers.eq(renderedAdminPath))).thenReturn(adminCreds);
 
-    callbackHandler.handle(callbacks);
-    assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
-    verify(vaultService).getSecret(ArgumentMatchers.eq(renderedAdminPath));
-    verify(vaultService, never()).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_USERS_PATH));
-  }
+        callbackHandler.handle(callbacks);
+        assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
+        verify(vaultService).getSecret(ArgumentMatchers.eq(renderedAdminPath));
+        verify(vaultService, never()).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_USERS_PATH));
+    }
 
-  @Test
-  public void shouldHandleClientLogin() throws Exception {
-    callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
+    @Test
+    public void shouldHandleClientLogin() throws Exception {
+        callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
 
-    Callback[] callbacks = new Callback[2];
-    String clientUsername = "alice";
-    callbacks[0] = new NameCallback("username", clientUsername);
-    callbacks[1] = new PlainAuthenticateCallback("alicepwd".toCharArray());
+        Callback[] callbacks = new Callback[2];
+        String clientUsername = "alice";
+        callbacks[0] = new NameCallback("username", clientUsername);
+        callbacks[1] = new PlainAuthenticateCallback("alicepwd".toCharArray());
 
-    Map<String, String> usersMap = new HashMap<>();
-    usersMap.put(VaultAuthenticationLoginCallbackHandler.PASSWORD_MAP_ENTRY_KEY, "alicepwd");
+        Map<String, String> usersMap = new HashMap<>();
+        usersMap.put(VaultAuthenticationLoginCallbackHandler.PASSWORD_MAP_ENTRY_KEY, "alicepwd");
 
-    when(vaultService.getSecret(ArgumentMatchers.eq(VAULT_KAFKA_USERS_PATH+"/"+clientUsername))).thenReturn(usersMap);
+        String secretPath = VAULT_KAFKA_USERS_PATH + "/" + clientUsername;
 
-    callbackHandler.handle(callbacks);
-    assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
-    verify(vaultService, never()).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH));
-    verify(vaultService).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_USERS_PATH+"/"+clientUsername));
+        when(vaultService.getSecret(ArgumentMatchers.eq(secretPath))).thenReturn(usersMap);
 
-  }
+        callbackHandler.handle(callbacks);
+        assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
+        verify(vaultService, never()).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH));
+        verify(vaultService).getSecret(ArgumentMatchers.eq(secretPath));
 
-  @Test
-  public void shouldThrownExceptionWithNotSupportedCallback() throws Exception {
-    Callback[] callbacks = new Callback[1];
-    callbacks[0] = new AuthorizeCallback("authnID", "authzID");
+    }
 
-    thrown.expect(UnsupportedCallbackException.class);
-    callbackHandler.handle(callbacks);
-  }
+    @Test
+    public void shouldThrownExceptionWithNotSupportedCallback() throws Exception {
+        Callback[] callbacks = new Callback[1];
+        callbacks[0] = new AuthorizeCallback("authnID", "authzID");
+
+        thrown.expect(UnsupportedCallbackException.class);
+        callbackHandler.handle(callbacks);
+    }
 }

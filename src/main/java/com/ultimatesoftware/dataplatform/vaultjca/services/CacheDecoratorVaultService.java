@@ -45,8 +45,8 @@ public class CacheDecoratorVaultService implements VaultService {
             .maximumSize(500)
             .expireAfterWrite(errorCacheTtl, TimeUnit.MINUTES)
             .build();
-    log.debug("Cache initialized with TTL {}", cacheTtl);
-    log.debug("Error cache initialized with TTL {}", errorCacheTtl);
+    log.info("Cache initialized with TTL {}", cacheTtl);
+    log.info("Error cache initialized with TTL {}", errorCacheTtl);
   }
 
   @Override
