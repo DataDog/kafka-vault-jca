@@ -72,13 +72,22 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
         } else {
             vaultService = new DefaultVaultService();
         }
-        String fromEnv = System.getenv("KAFKA_VAULT_USER_ENTRY_KEY");
-        userMapEntryKey = fromEnv == null ? USER_MAP_ENTRY_KEY : fromEnv;
+        initMapKeys(null);
     }
 
     // for testing
-    protected VaultAuthenticationLoginCallbackHandler(VaultService vaultService) {
+    protected VaultAuthenticationLoginCallbackHandler(VaultService vaultService, String userMapKey) {
         this.vaultService = vaultService;
+        initMapKeys(userMapKey);
+    }
+
+    void initMapKeys(String userMapKey) {
+        if (userMapKey != null) {
+            userMapEntryKey = userMapKey;
+        } else {
+            String fromEnv = System.getenv("KAFKA_VAULT_USER_ENTRY_KEY");
+            userMapEntryKey = fromEnv == null ? USER_MAP_ENTRY_KEY : fromEnv;
+        }
     }
 
     @Override

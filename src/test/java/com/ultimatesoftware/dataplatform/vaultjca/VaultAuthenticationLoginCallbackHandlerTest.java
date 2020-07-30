@@ -46,7 +46,7 @@ public class VaultAuthenticationLoginCallbackHandlerTest {
 
     @Before
     public void init() {
-        callbackHandler = new VaultAuthenticationLoginCallbackHandler(vaultService);
+        callbackHandler = new VaultAuthenticationLoginCallbackHandler(vaultService, null);
         options.put(VaultAuthenticationLoginCallbackHandler.ADMIN_PATH, VAULT_KAFKA_ADMIN_PATH);
         options.put(VaultAuthenticationLoginCallbackHandler.USERS_PATH, VAULT_KAFKA_USERS_PATH);
 
@@ -144,7 +144,28 @@ public class VaultAuthenticationLoginCallbackHandlerTest {
         assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
         verify(vaultService, never()).getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH));
         verify(vaultService).getSecret(ArgumentMatchers.eq(secretPath));
+    }
 
+    @Test
+    public void shouldHandleCustomEntryKey() throws Exception {
+        String customKey = "foobar";
+        callbackHandler = new VaultAuthenticationLoginCallbackHandler(vaultService, customKey);
+        callbackHandler.configure(Collections.EMPTY_MAP, SASL_MECHANISM, jaasConfigEntries);
+
+        Callback[] callbacks = new Callback[2];
+        String clientUsername = "alice";
+        callbacks[0] = new NameCallback(customKey, clientUsername);
+        callbacks[1] = new PlainAuthenticateCallback("alicepwd".toCharArray());
+
+        Map<String, String> usersMap = new HashMap<>();
+        usersMap.put(VaultAuthenticationLoginCallbackHandler.PASSWORD_MAP_ENTRY_KEY, "alicepwd");
+
+        String secretPath = VAULT_KAFKA_USERS_PATH + "/" + clientUsername;
+
+        when(vaultService.getSecret(ArgumentMatchers.eq(secretPath))).thenReturn(usersMap);
+
+        callbackHandler.handle(callbacks);
+        assertThat(((PlainAuthenticateCallback) callbacks[1]).authenticated(), is(true));
     }
 
     @Test
