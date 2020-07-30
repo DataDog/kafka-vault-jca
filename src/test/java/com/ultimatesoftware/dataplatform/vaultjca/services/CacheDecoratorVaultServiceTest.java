@@ -42,5 +42,15 @@ public class CacheDecoratorVaultServiceTest {
     verify(vaultService, never()).getSecret(eq(path));
   }
 
+  @Test
+  public void shouldCacheMissingEntryError() {
+    int TOTAL_TIMES_CALLED = 1;
+    String path = "no/user/in/this/path";
+    cacheDecoratorVaultService.getSecret(path);
+    verify(vaultService, times(TOTAL_TIMES_CALLED)).getSecret(eq(path));
+    cacheDecoratorVaultService.getSecret(path);
+    verify(vaultService, times(TOTAL_TIMES_CALLED)).getSecret(eq(path));
+  }
+
 }
 

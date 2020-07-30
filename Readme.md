@@ -25,6 +25,10 @@ KafkaServer {
 };
 ```
 
+If the user name is part of the path, you can provide a `{username}` placeholder which will be replaced by the current user name at runtime.
+
+e.g. `root/{username}/secret`
+
 ## Configuration
 Enable SASL/PLAIN and configure the custom `CallbackHandler`
 - Plain SASL config. See [this](https://docs.confluent.io/current/kafka/authentication_sasl/authentication_sasl_plain.html#configuration) for more options
@@ -52,7 +56,7 @@ username=admin
 password=secretpassword
 ```
 
-For users create entries under `users_path/{user}` with an entry `passoword=secret-client-password`
+For users create entries under `users_path/{user}` with an entry `password=secret-client-password`
 
 - Start the service passing the jaas file as `-Djava.security.auth.login.config=PATH_TO_JAAS_FILE`
 
@@ -60,8 +64,11 @@ For users create entries under `users_path/{user}` with an entry `passoword=secr
 There are few configuration options available through environment variables as follow:
 
 ```bash
+KAFKA_VAULT_USER_ENTRY_KEY=user # Optional. Overrides the name of the key in the secrets map (Default is `username`)
 CACHE_VAULT="true" # When true will enable cache data from vault. Defaults to false.
-VAULT_CACHE_TTL_MIN=5 # Optional, defaults to 2 min when  `CACHE_VAULT` is enabled.
+VAULT_CACHE_TTL_MIN=5 # Optional, defaults to 5 min when  `CACHE_VAULT` is enabled.
+VAULT_ERROR_CACHE_TTL_MIN=5 # Optional, default to 5 minutes when `CACHE_VAULT` is enabled. Prevents to retry a call for n minutes if a query failed (circuit-breaker like)
+
 ```
 
 ## Client Configuration
