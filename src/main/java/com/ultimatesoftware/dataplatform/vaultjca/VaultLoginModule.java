@@ -12,6 +12,8 @@ import org.apache.kafka.common.security.plain.internals.PlainSaslServerProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.ultimatesoftware.dataplatform.vaultjca.VaultAuthenticationLoginCallbackHandler.*;
+
 /**
  * Implementation of {@link LoginModule} that sets up Vault as a Login Module for Kafka.
  *
@@ -31,8 +33,6 @@ import org.slf4j.LoggerFactory;
 public class VaultLoginModule implements LoginModule {
   private static final Logger log = LoggerFactory.getLogger(VaultLoginModule.class);
   static final String ADMIN_PATH = "admin_path";
-  static final String USERNAME_KEY = "username";
-  static final String PASSWORD_KEY = "password";
   static final String ENV_CACHE_VAULT = "CACHE_VAULT";
 
   private final VaultService vaultService;
@@ -65,15 +65,15 @@ public class VaultLoginModule implements LoginModule {
       // I'm assuming that admin credentials are only reachable using specific vault creds
       final Map<String, String> adminCredentials = vaultService.getSecret(adminPath);
       if (adminCredentials != null && adminCredentials.size() > 0) {
-        subject.getPublicCredentials().add(adminCredentials.get(USERNAME_KEY));
-        subject.getPrivateCredentials().add(adminCredentials.get(PASSWORD_KEY));
+        subject.getPublicCredentials().add(adminCredentials.get(getUserMapEntryKey()));
+        subject.getPrivateCredentials().add(adminCredentials.get(PASSWORD_MAP_ENTRY_KEY));
         return;
       }
 
       throw new RuntimeException(String.format("Secret not found for path %s", adminPath));
     }
 
-    if (!(isNullOrEmpty((String) options.get(USERNAME_KEY)) || isNullOrEmpty((String) options.get(PASSWORD_KEY)))) {
+    if (!(isNullOrEmpty((String) options.get(USER_MAP_ENTRY_KEY)) || isNullOrEmpty((String) options.get(PASSWORD_MAP_ENTRY_KEY)))) {
       subject.getPublicCredentials().add(options.get("username"));
       subject.getPrivateCredentials().add(options.get("password"));
       return;
