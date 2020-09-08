@@ -66,6 +66,7 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
 
     public static String getUserMapEntryKey(){
         String fromEnv = System.getenv("KAFKA_VAULT_USER_ENTRY_KEY");
+        log.info("Entry key from env: {}", fromEnv);
         return fromEnv == null ? USER_MAP_ENTRY_KEY : fromEnv;
     }
 
@@ -151,6 +152,7 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
         log.debug("Trying authentication for {} in path {}", username, pathVault);
         Map<String, String> usersMap = vaultService.getSecret(pathVault);
         if (usersMap.size() == 0) {
+            log.warn("No kv at path {}", pathVault);
             return false;
         }
         if (username.equals("admin")) {
