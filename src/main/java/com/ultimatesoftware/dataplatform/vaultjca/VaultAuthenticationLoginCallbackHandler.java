@@ -1,7 +1,6 @@
 package com.ultimatesoftware.dataplatform.vaultjca;
 
 import static com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModule.ENV_CACHE_VAULT;
-import static com.ultimatesoftware.dataplatform.vaultjca.VaultLoginModule.USERNAME_KEY;
 
 import com.ultimatesoftware.dataplatform.vaultjca.services.CacheDecoratorVaultService;
 import com.ultimatesoftware.dataplatform.vaultjca.services.DefaultVaultService;
@@ -65,6 +64,12 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
     private String adminPathVault;
     private String userMapEntryKey;
 
+    public static String getUserMapEntryKey(){
+        String fromEnv = System.getenv("KAFKA_VAULT_USER_ENTRY_KEY");
+        log.info("Entry key from env: {}", fromEnv);
+        return fromEnv == null ? USER_MAP_ENTRY_KEY : fromEnv;
+    }
+
     public VaultAuthenticationLoginCallbackHandler() {
         if (System.getenv(ENV_CACHE_VAULT) != null && System.getenv(ENV_CACHE_VAULT).equalsIgnoreCase("true")) {
             log.debug("Cache vault enabled");
@@ -72,23 +77,16 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
         } else {
             vaultService = new DefaultVaultService();
         }
-        initMapKeys(null);
+        userMapEntryKey = getUserMapEntryKey();
     }
 
     // for testing
     protected VaultAuthenticationLoginCallbackHandler(VaultService vaultService, String userMapKey) {
         this.vaultService = vaultService;
-        initMapKeys(userMapKey);
+        userMapEntryKey = userMapKey;
     }
 
-    void initMapKeys(String userMapKey) {
-        if (userMapKey != null) {
-            userMapEntryKey = userMapKey;
-        } else {
-            String fromEnv = System.getenv("KAFKA_VAULT_USER_ENTRY_KEY");
-            userMapEntryKey = fromEnv == null ? USER_MAP_ENTRY_KEY : fromEnv;
-        }
-    }
+
 
     @Override
     public void configure(Map<String, ?> configs, String saslMechanism, List<AppConfigurationEntry> jaasConfigEntries) {
@@ -148,17 +146,17 @@ public class VaultAuthenticationLoginCallbackHandler implements AuthenticateCall
 
         String userRenderedPath = isTemplatedPath(usersPathVault) ? usersPathVault.replace(USERNAME_TEMPLATE_FRAGMENT, username)
                 : String.format("%s/%s", usersPathVault, username);
-        String adminRenderedPath = isTemplatedPath(adminPathVault) ? adminPathVault.replace(USERNAME_TEMPLATE_FRAGMENT, username)
-                : adminPathVault;
 
-        String pathVault = username.equals("admin") ? adminRenderedPath : userRenderedPath;
+        String pathVault = username.equals("admin") ? adminPathVault : userRenderedPath;
+
         log.debug("Trying authentication for {} in path {}", username, pathVault);
         Map<String, String> usersMap = vaultService.getSecret(pathVault);
         if (usersMap.size() == 0) {
+            log.warn("No kv at path {}", pathVault);
             return false;
         }
         if (username.equals("admin")) {
-            return usersMap.get(userMapEntryKey).equals(username) && Arrays.equals(usersMap.get(PASSWORD_MAP_ENTRY_KEY).toCharArray(), password);
+            return usersMap.get(getUserMapEntryKey()).equals(username) && Arrays.equals(usersMap.get(PASSWORD_MAP_ENTRY_KEY).toCharArray(), password);
         }
 
         return Arrays.equals(usersMap.get(PASSWORD_MAP_ENTRY_KEY).toCharArray(), password);

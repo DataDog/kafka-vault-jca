@@ -5,6 +5,8 @@ import com.bettercloud.vault.VaultConfig;
 import com.bettercloud.vault.VaultException;
 import java.util.Collections;
 import java.util.Map;
+
+import com.bettercloud.vault.response.AuthResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

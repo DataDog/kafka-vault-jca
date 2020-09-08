@@ -1,5 +1,6 @@
 package com.ultimatesoftware.dataplatform.vaultjca;
 
+import static com.ultimatesoftware.dataplatform.vaultjca.VaultAuthenticationLoginCallbackHandler.*;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
@@ -7,7 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.ultimatesoftware.dataplatform.vaultjca.services.VaultService;
-import static com.ultimatesoftware.dataplatform.vaultjca.VaultAuthenticationLoginCallbackHandler.USERNAME_TEMPLATE_FRAGMENT;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,6 +20,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentMatchers;
+import org.testcontainers.shaded.org.bouncycastle.crypto.tls.UserMappingType;
 
 
 public class VaultLoginModuleTest {
@@ -69,8 +71,8 @@ public class VaultLoginModuleTest {
     options = new HashMap<>();
     String alice = "alice";
     String alicepwd = "alicepwd";
-    options.put(VaultLoginModule.USERNAME_KEY, alice);
-    options.put(VaultLoginModule.PASSWORD_KEY, alicepwd);
+    options.put(USER_MAP_ENTRY_KEY, alice);
+    options.put(PASSWORD_MAP_ENTRY_KEY, alicepwd);
 
     vaultLoginModule.initialize(subject, callbackHandler, Collections.EMPTY_MAP, options);
     assertThat(subject.getPublicCredentials(), contains(alice));
@@ -87,8 +89,8 @@ public class VaultLoginModuleTest {
 
   private void trainMockForSuccess() {
     Map<String, String> adminCredentials = new HashMap<>();
-    adminCredentials.put(VaultLoginModule.USERNAME_KEY, ADMIN);
-    adminCredentials.put(VaultLoginModule.PASSWORD_KEY, ADMINPWD);
+    adminCredentials.put(USER_MAP_ENTRY_KEY, ADMIN);
+    adminCredentials.put(PASSWORD_MAP_ENTRY_KEY, ADMINPWD);
     when(vaultService.getSecret(ArgumentMatchers.eq(VAULT_KAFKA_ADMIN_PATH))).thenReturn(adminCredentials);
   }
 
