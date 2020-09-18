@@ -1,26 +1,25 @@
 package com.ultimatesoftware.dataplatform.vaultjca;
 
+import com.ultimatesoftware.dataplatform.vaultjca.services.VaultService;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentMatchers;
+
+import javax.security.auth.Subject;
+import javax.security.auth.callback.CallbackHandler;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+
 import static com.ultimatesoftware.dataplatform.vaultjca.VaultAuthenticationLoginCallbackHandler.*;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import com.ultimatesoftware.dataplatform.vaultjca.services.VaultService;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import javax.security.auth.Subject;
-import javax.security.auth.callback.CallbackHandler;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.mockito.ArgumentMatchers;
-import org.testcontainers.shaded.org.bouncycastle.crypto.tls.UserMappingType;
 
 
 public class VaultLoginModuleTest {
