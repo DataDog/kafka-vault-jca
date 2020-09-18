@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class DirtSimpleVaultClient {
+public class SimpleVaultClient {
 
     String token;
     String vaultAddr;
@@ -25,11 +25,11 @@ public class DirtSimpleVaultClient {
 
     ObjectMapper mapper;
 
-    private static final Logger log = LoggerFactory.getLogger(DirtSimpleVaultClient.class);
+    private static final Logger log = LoggerFactory.getLogger(SimpleVaultClient.class);
 
     private static final Map<String, String> EMPTY_MAP = Collections.unmodifiableMap(new HashMap<>());
 
-    public DirtSimpleVaultClient(VaultConfig conf, int version){
+    public SimpleVaultClient(VaultConfig conf, int version){
         token = conf.getToken();
         this.version = version;
         vaultAddr = conf.getAddress();

@@ -12,11 +12,11 @@ public class DefaultVaultService implements VaultService {
   private static final Logger log = LoggerFactory.getLogger(DefaultVaultService.class);
   private static Integer KV_VERSION = 2;
 
-  private final DirtSimpleVaultClient vault;
+  private final SimpleVaultClient vault;
 
   public DefaultVaultService() {
     try {
-      this.vault = new DirtSimpleVaultClient(new VaultConfig().build(), KV_VERSION);
+      this.vault = new SimpleVaultClient(new VaultConfig().build(), KV_VERSION);
     } catch (VaultException e) {
       log.error("Error creating Vault service", e);
       throw new RuntimeException(e);
@@ -25,7 +25,7 @@ public class DefaultVaultService implements VaultService {
 
   protected DefaultVaultService(String vaultAddr, String token) {
     try {
-      this.vault = new DirtSimpleVaultClient(new VaultConfig().address(vaultAddr).token(token).build(), KV_VERSION);
+      this.vault = new SimpleVaultClient(new VaultConfig().address(vaultAddr).token(token).build(), KV_VERSION);
     } catch (VaultException e) {
       log.error("Error creating Vault service", e);
       throw new RuntimeException(e);
